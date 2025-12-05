@@ -1,0 +1,68 @@
+.affirmation-display {
+  min-height: 120px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.affirmation-display.active {
+  background: rgba(0, 191, 165, 0.1);
+  border: 1px solid rgba(0, 191, 165, 0.3);
+}
+
+.affirmation-text {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: white;
+  margin: 0;
+}
+
+.audio-indicator {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: #00bfa5;
+}
+
+.audio-indicator .material-icons {
+  font-size: 32px;
+}
+
+.audio-waves {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.wave {
+  display: block;
+  width: 4px;
+  height: 20px;
+  background: #00bfa5;
+  border-radius: 2px;
+  animation: wave 0.8s ease-in-out infinite;
+}
+
+.wave:nth-child(2) {
+  animation-delay: 0.1s;
+  height: 30px;
+}
+
+.wave:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+@keyframes wave {
+  0%, 100% {
+    transform: scaleY(0.5);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}

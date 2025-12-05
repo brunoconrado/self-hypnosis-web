@@ -1,0 +1,42 @@
+.play-button {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #00bfa5 0%, #00897b 100%);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(0, 191, 165, 0.4);
+  transition: all 0.2s ease;
+}
+
+.play-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 25px rgba(0, 191, 165, 0.5);
+}
+
+.play-button:active {
+  transform: scale(0.95);
+}
+
+.play-button.playing {
+  background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+  box-shadow: 0 4px 20px rgba(244, 67, 54, 0.4);
+}
+
+.play-button.playing:hover {
+  box-shadow: 0 6px 25px rgba(244, 67, 54, 0.5);
+}
+
+.play-button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.play-button .material-icons {
+  font-size: 40px;
+}

@@ -1,0 +1,187 @@
+/**
+ * Affirmations Data
+ * 100 affirmations across 5 categories (Portuguese)
+ */
+
+export const affirmationCategories = [
+  {
+    id: 'financeiro',
+    name: 'Financeiro',
+    affirmations: [
+      'Eu atraio abundância e prosperidade para minha vida.',
+      'O dinheiro flui facilmente para mim.',
+      'Eu mereço ser rico e bem-sucedido.',
+      'Minhas finanças estão sempre em ordem.',
+      'Eu sou um ímã para oportunidades financeiras.',
+      'A prosperidade é meu estado natural.',
+      'Eu administro meu dinheiro com sabedoria.',
+      'Novas fontes de renda chegam até mim constantemente.',
+      'Eu estou aberto a receber toda a riqueza que a vida me oferece.',
+      'Minha conta bancária cresce todos os dias.',
+      'Eu tenho uma mentalidade de abundância.',
+      'O sucesso financeiro é inevitável para mim.',
+      'Eu invisto em meu futuro com confiança.',
+      'Minhas dívidas estão sendo eliminadas rapidamente.',
+      'Eu crio riqueza fazendo o que amo.',
+      'A liberdade financeira já é minha realidade.',
+      'Eu agradeço por toda a abundância em minha vida.',
+      'Meus investimentos geram retornos excelentes.',
+      'Eu tenho total controle sobre minhas finanças.',
+      'A riqueza me permite ajudar mais pessoas.'
+    ]
+  },
+  {
+    id: 'saude',
+    name: 'Saúde',
+    affirmations: [
+      'Meu corpo é forte, saudável e cheio de energia.',
+      'Cada célula do meu corpo vibra com saúde perfeita.',
+      'Eu escolho alimentos que nutrem meu corpo.',
+      'Meu sistema imunológico é poderoso.',
+      'Eu durmo profundamente e acordo renovado.',
+      'A cura flui naturalmente pelo meu corpo.',
+      'Eu respeito e cuido do meu corpo com amor.',
+      'Minha mente e meu corpo estão em perfeita harmonia.',
+      'Eu libero toda tensão e estresse do meu corpo.',
+      'A vitalidade pulsa em cada parte de mim.',
+      'Meu corpo se regenera e se fortalece diariamente.',
+      'Eu respiro profundamente e me sinto em paz.',
+      'Minha saúde melhora a cada dia que passa.',
+      'Eu sou grato pela saúde que tenho.',
+      'Meu corpo é meu templo e eu o trato com respeito.',
+      'A energia positiva circula livremente em mim.',
+      'Eu faço escolhas saudáveis naturalmente.',
+      'Meu peso ideal é fácil de manter.',
+      'Eu tenho energia ilimitada para viver plenamente.',
+      'A saúde perfeita é meu direito de nascença.'
+    ]
+  },
+  {
+    id: 'sono',
+    name: 'Sono',
+    affirmations: [
+      'Eu mereço um sono reparador e tranquilo.',
+      'Minha mente se acalma facilmente para dormir.',
+      'Eu libero todas as preocupações do dia.',
+      'O sono vem naturalmente quando me deito.',
+      'Meu quarto é um santuário de paz e descanso.',
+      'Eu acordo todas as manhãs me sentindo renovado.',
+      'Meu corpo relaxa completamente durante o sono.',
+      'Sonhos positivos me visitam todas as noites.',
+      'Eu durmo profundamente durante toda a noite.',
+      'A tranquilidade envolve minha mente e corpo.',
+      'Cada respiração me leva mais fundo ao relaxamento.',
+      'Eu confio no processo natural do sono.',
+      'Meus pensamentos se aquietam suavemente.',
+      'O descanso restaura toda minha energia.',
+      'Eu me sinto seguro e protegido enquanto durmo.',
+      'A paz interior me embala todas as noites.',
+      'Meu sono é profundo e ininterrupto.',
+      'Eu acordo no momento perfeito, cheio de energia.',
+      'O relaxamento flui por todo meu ser.',
+      'Dormir bem é natural e fácil para mim.'
+    ]
+  },
+  {
+    id: 'autoestima',
+    name: 'Autoestima',
+    affirmations: [
+      'Eu me amo e me aceito completamente.',
+      'Eu sou digno de amor e respeito.',
+      'Minha autoestima cresce a cada dia.',
+      'Eu confio em mim mesmo e em minhas decisões.',
+      'Eu sou único e especial exatamente como sou.',
+      'Meus defeitos são parte da minha humanidade.',
+      'Eu mereço todas as coisas boas da vida.',
+      'Minha voz importa e merece ser ouvida.',
+      'Eu me perdoo por erros passados.',
+      'Sou suficiente exatamente como sou agora.',
+      'Eu irradio confiança e autoestima.',
+      'Minhas qualidades superam minhas imperfeições.',
+      'Eu me trato com gentileza e compaixão.',
+      'Meu valor não depende da opinião dos outros.',
+      'Eu celebro minhas conquistas, grandes e pequenas.',
+      'Sou merecedor de felicidade e sucesso.',
+      'Eu honro meus sentimentos e necessidades.',
+      'Minha autenticidade é minha maior força.',
+      'Eu me orgulho da pessoa que estou me tornando.',
+      'Amor próprio é minha prioridade.'
+    ]
+  },
+  {
+    id: 'produtividade',
+    name: 'Produtividade',
+    affirmations: [
+      'Eu sou focado e produtivo em tudo que faço.',
+      'Minha concentração é forte e duradoura.',
+      'Eu completo minhas tarefas com eficiência.',
+      'O tempo trabalha a meu favor.',
+      'Eu priorizo o que é mais importante.',
+      'Minha mente está clara e organizada.',
+      'Eu transformo desafios em oportunidades.',
+      'A procrastinação não tem poder sobre mim.',
+      'Eu tomo ações decisivas em direção aos meus objetivos.',
+      'Minha energia está direcionada para o que importa.',
+      'Eu crio resultados extraordinários todos os dias.',
+      'Minha disciplina me leva ao sucesso.',
+      'Eu mantenho o foco até completar cada tarefa.',
+      'Pequenas ações consistentes geram grandes resultados.',
+      'Eu administro meu tempo com maestria.',
+      'Minha produtividade aumenta naturalmente.',
+      'Eu trabalho de forma inteligente e eficaz.',
+      'Cada dia sou mais organizado e eficiente.',
+      'Eu celebro cada progresso que faço.',
+      'O sucesso é o resultado natural do meu esforço.'
+    ]
+  }
+];
+
+/**
+ * Create initial affirmation items with default state
+ */
+export function createInitialAffirmations() {
+  const items = [];
+
+  affirmationCategories.forEach(category => {
+    category.affirmations.forEach((text, index) => {
+      items.push({
+        id: `${category.id}_${index}`,
+        category: category.id,
+        categoryName: category.name,
+        text,
+        enabled: true,
+        audioUrl: null,
+        audioDurationMs: null
+      });
+    });
+  });
+
+  return items;
+}
+
+/**
+ * Get affirmations grouped by category
+ * Handles both local (item.category) and API (item.categoryId) format
+ */
+export function getAffirmationsByCategory(items) {
+  const grouped = {};
+
+  // First, group items by categoryId (API format) or category (local format)
+  items.forEach(item => {
+    const catId = item.categoryId || item.category;
+    if (!catId) return;
+
+    if (!grouped[catId]) {
+      // Find category name from predefined categories
+      const category = affirmationCategories.find(c => c.id === catId);
+      grouped[catId] = {
+        name: category?.name || catId,
+        items: []
+      };
+    }
+
+    grouped[catId].items.push(item);
+  });
+
+  return grouped;
+}
