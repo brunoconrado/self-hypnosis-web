@@ -123,14 +123,16 @@ class ApiService {
     return null;
   }
 
-  // Categories
+  // Categories (public endpoint)
   async getCategories() {
-    const response = await this.request('/api/categories');
-
-    if (response.ok) {
-      return await response.json();
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/categories`);
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (err) {
+      console.error('[API] Categories fetch failed:', err);
     }
-
     return [];
   }
 
@@ -139,7 +141,10 @@ class ApiService {
     const response = await this.request('/api/affirmations');
 
     if (response.ok) {
-      return await response.json();
+      const data = await response.json();
+      // New API returns { affirmations: [...], voice_id, is_default_voice }
+      // Return just the affirmations array for backward compatibility
+      return data.affirmations || data || [];
     }
 
     return [];

@@ -10,6 +10,7 @@ export function AffirmationProvider({ children }) {
 
   const [playlist, setPlaylist] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [sessionItems, setSessionItems] = useState([]); // Prepared session items
   const [currentIndex, setCurrentIndex] = useState(0);
   const [gapBetweenSec, setGapBetweenSec] = useState(2);
   const [isRunning, setIsRunning] = useState(false);
@@ -78,19 +79,17 @@ export function AffirmationProvider({ children }) {
       try {
         let affirmationsData;
 
+        // Always fetch categories (needed for both auth and guest)
+        const cats = await api.getCategories();
+        if (mountedRef.current) {
+          setCategories(cats);
+        }
+
         if (isAuthenticated) {
           // Authenticated - get user's affirmations
           console.log('[AffirmationProvider] Fetching authenticated affirmations...');
-          const [affs, cats] = await Promise.all([
-            api.getAffirmations(),
-            api.getCategories(),
-          ]);
-          affirmationsData = affs;
-          console.log('[AffirmationProvider] Got authenticated data:', affs?.length, 'items');
-
-          if (mountedRef.current) {
-            setCategories(cats);
-          }
+          affirmationsData = await api.getAffirmations();
+          console.log('[AffirmationProvider] Got authenticated data:', affirmationsData?.length, 'items');
         } else {
           // Guest - get default affirmations from API
           console.log('[AffirmationProvider] Fetching default affirmations...');
@@ -167,22 +166,67 @@ export function AffirmationProvider({ children }) {
     [enabledItems]
   );
 
+  // Get all enabled items sorted by order (for playback including those without audio)
+  const enabledItemsSorted = useMemo(() =>
+    [...enabledItems].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+    [enabledItems]
+  );
+
   // Count of items with server audio
   const serverAudioCount = itemsWithServerAudio.length;
 
-  // Current affirmation text
-  const currentAffirmation = enabledItemsWithAudio.length > 0
-    ? enabledItemsWithAudio[currentIndex % enabledItemsWithAudio.length]?.text || ''
+  // Current affirmation text - use sessionItems if available, otherwise enabledItemsSorted
+  const activeItems = sessionItems.length > 0 ? sessionItems : enabledItemsSorted;
+
+  const currentAffirmation = activeItems.length > 0
+    ? activeItems[currentIndex % activeItems.length]?.text || ''
     : '';
 
   // Current item
-  const currentItem = enabledItemsWithAudio.length > 0
-    ? enabledItemsWithAudio[currentIndex % enabledItemsWithAudio.length]
+  const currentItem = activeItems.length > 0
+    ? activeItems[currentIndex % activeItems.length]
     : null;
+
+  // Shuffle array utility
+  const shuffleArray = (array) => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  // Prepare session with selected categories and optional shuffle
+  const prepareSession = useCallback((categoryIds, shuffle = false) => {
+    // Filter playlist by selected categories and only items with audio
+    let items = playlist.filter(item =>
+      categoryIds.includes(item.categoryId) && item.audioUrl
+    );
+
+    // Sort by order
+    items.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+    // Shuffle if requested
+    if (shuffle) {
+      items = shuffleArray(items);
+    }
+
+    // Preload audio for session items
+    preloadAudioForItems(items);
+
+    setSessionItems(items);
+    setCurrentIndex(0);
+
+    console.log('[AffirmationProvider] Session prepared:', items.length, 'items, shuffle:', shuffle);
+  }, [playlist, preloadAudioForItems]);
 
   // Store refs for use in callbacks
   const stateRef = useRef({
     enabledItemsWithAudio,
+    enabledItemsSorted,
+    sessionItems,
+    activeItems,
     isRunning,
     gapBetweenSec,
     voiceVolume
@@ -191,11 +235,14 @@ export function AffirmationProvider({ children }) {
   useEffect(() => {
     stateRef.current = {
       enabledItemsWithAudio,
+      enabledItemsSorted,
+      sessionItems,
+      activeItems,
       isRunning,
       gapBetweenSec,
       voiceVolume
     };
-  }, [enabledItemsWithAudio, isRunning, gapBetweenSec, voiceVolume]);
+  }, [enabledItemsWithAudio, enabledItemsSorted, sessionItems, activeItems, isRunning, gapBetweenSec, voiceVolume]);
 
   // Play audio from cache or URL
   const playAudio = useCallback((url) => {
@@ -260,15 +307,24 @@ export function AffirmationProvider({ children }) {
 
   // Go to next affirmation
   const nextAffirmation = useCallback(() => {
-    const { enabledItemsWithAudio } = stateRef.current;
-    if (enabledItemsWithAudio.length === 0) return;
+    const { activeItems, isRunning, gapBetweenSec } = stateRef.current;
+    if (activeItems.length === 0) return;
 
     setCurrentIndex(prevIndex => {
-      const nextIndex = (prevIndex + 1) % enabledItemsWithAudio.length;
+      const nextIndex = (prevIndex + 1) % activeItems.length;
+      const nextItem = activeItems[nextIndex];
 
-      // Play next audio
-      if (enabledItemsWithAudio[nextIndex]?.audioUrl) {
-        playAudio(enabledItemsWithAudio[nextIndex].audioUrl);
+      // Play next audio if available
+      if (nextItem?.audioUrl) {
+        playAudio(nextItem.audioUrl);
+      } else if (isRunning) {
+        // No audio - just show text for a moment then move to next
+        // Schedule next affirmation after showing text for 3 seconds + gap
+        gapTimerRef.current = setTimeout(() => {
+          if (mountedRef.current) {
+            nextAffirmation();
+          }
+        }, 3000 + (gapBetweenSec * 1000));
       }
 
       return nextIndex;
@@ -277,18 +333,30 @@ export function AffirmationProvider({ children }) {
 
   // Start playback
   const start = useCallback(() => {
-    if (enabledItemsWithAudio.length === 0) return false;
+    // Use sessionItems if available, otherwise enabledItemsSorted
+    const itemsToPlay = sessionItems.length > 0 ? sessionItems : enabledItemsSorted;
+
+    if (itemsToPlay.length === 0) return false;
 
     setIsRunning(true);
     setCurrentIndex(0);
 
-    // Play first audio
-    if (enabledItemsWithAudio[0]?.audioUrl) {
-      playAudio(enabledItemsWithAudio[0].audioUrl);
+    const firstItem = itemsToPlay[0];
+
+    // Play first audio if available
+    if (firstItem?.audioUrl) {
+      playAudio(firstItem.audioUrl);
+    } else {
+      // No audio - schedule next after showing text
+      gapTimerRef.current = setTimeout(() => {
+        if (mountedRef.current) {
+          nextAffirmation();
+        }
+      }, 3000 + (gapBetweenSec * 1000));
     }
 
     return true;
-  }, [enabledItemsWithAudio, playAudio]);
+  }, [sessionItems, enabledItemsSorted, gapBetweenSec, playAudio, nextAffirmation]);
 
   // Stop playback
   const stopPlayback = useCallback(() => {
@@ -456,6 +524,7 @@ export function AffirmationProvider({ children }) {
   const value = {
     playlist,
     categories,
+    sessionItems,
     currentIndex,
     gapBetweenSec,
     isRunning,
@@ -463,6 +532,7 @@ export function AffirmationProvider({ children }) {
     isLoading,
     voiceVolume,
     enabledItems,
+    enabledItemsSorted,
     enabledItemsWithAudio,
     itemsWithServerAudio,
     serverAudioCount,
@@ -470,6 +540,7 @@ export function AffirmationProvider({ children }) {
     currentItem,
     setGapBetweenSec,
     setVoiceVolume,
+    prepareSession,
     start,
     stop: stopPlayback,
     toggleItemEnabled,

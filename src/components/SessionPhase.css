@@ -1,0 +1,188 @@
+.session-phase {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.3s ease;
+}
+
+.session-phase.active {
+  background: rgba(0, 191, 165, 0.08);
+  border-color: rgba(0, 191, 165, 0.3);
+}
+
+.session-phase.completed {
+  background: rgba(76, 175, 80, 0.08);
+  border-color: rgba(76, 175, 80, 0.3);
+}
+
+.session-phase.placeholder {
+  opacity: 0.6;
+}
+
+/* Header */
+.phase-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.phase-icon-wrapper {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.session-phase.active .phase-icon-wrapper {
+  background: rgba(0, 191, 165, 0.2);
+}
+
+.session-phase.completed .phase-icon-wrapper {
+  background: rgba(76, 175, 80, 0.2);
+}
+
+.phase-icon {
+  font-size: 22px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.session-phase.active .phase-icon {
+  color: #00bfa5;
+}
+
+.session-phase.completed .phase-icon {
+  color: #4caf50;
+}
+
+.phase-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  background: rgba(0, 191, 165, 0.3);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.1);
+  }
+}
+
+.phase-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.phase-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+  margin: 0 0 4px 0;
+}
+
+.phase-description {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0;
+}
+
+.phase-count {
+  padding: 4px 10px;
+  background: rgba(0, 191, 165, 0.2);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #00bfa5;
+}
+
+.phase-check {
+  color: #4caf50;
+  font-size: 24px;
+}
+
+/* Placeholder */
+.phase-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+}
+
+.phase-placeholder .material-icons {
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.phase-placeholder p {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Current text (active phase) */
+.phase-current {
+  margin-top: 16px;
+}
+
+.current-text-wrapper {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.audio-indicator {
+  font-size: 20px;
+  color: #00bfa5;
+  animation: audioWave 1s infinite ease-in-out;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+@keyframes audioWave {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.current-text {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  line-height: 1.5;
+  font-style: italic;
+}
+
+/* Progress bar */
+.phase-progress-bar {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.phase-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00bfa5, #4fd1c5);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
