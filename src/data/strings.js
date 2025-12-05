@@ -19,8 +19,8 @@ export const strings = {
   hz: 'Hz',
 
   // Voice Controls
-  voiceControls: 'Sugestões de Voz',
-  voiceVolume: 'Volume da Voz',
+  voiceControls: 'Sugestões',
+  voiceVolume: 'Volume da Sugestão',
   gapBetweenAudio: 'Intervalo entre Sugestões',
   seconds: 'seg',
 

@@ -5,6 +5,7 @@ import { useAuth } from '../providers/AuthProvider';
 import { AffirmationDisplay } from './AffirmationDisplay';
 import { AffirmationList } from './AffirmationList';
 import { SliderTile } from './SliderTile';
+import { BinauralBeatSlider } from './BinauralBeatSlider';
 import { PlayButton } from './PlayButton';
 import { ExpandableCard } from './ExpandableCard';
 import { strings } from '../data/strings';
@@ -94,30 +95,28 @@ export function HomeScreen() {
             icon="waves"
             summary={binauralSummary}
           >
+            <BinauralBeatSlider
+              value={beatFreq}
+              min={1}
+              max={40}
+              onChange={setBeatFreq}
+            />
+            <div className="binaural-divider" />
             <SliderTile
               label={strings.baseFrequency}
               value={baseFreq}
               min={100}
               max={500}
-              step={10}
-              unit={strings.hz}
-              onChange={setBaseFreq}
-            />
-            <SliderTile
-              label={strings.beatFrequency}
-              value={beatFreq}
-              min={1}
-              max={30}
               step={1}
               unit={strings.hz}
-              onChange={setBeatFreq}
+              onChange={setBaseFreq}
             />
             <SliderTile
               label={strings.binauralVolume}
               value={binauralVolume}
               min={0}
               max={1}
-              step={0.05}
+              step={0.01}
               unit=""
               onChange={setBinauralVolume}
             />
@@ -129,15 +128,6 @@ export function HomeScreen() {
             summary={voiceSummary}
           >
             <SliderTile
-              label={strings.voiceVolume}
-              value={voiceVolume}
-              min={0}
-              max={1}
-              step={0.05}
-              unit=""
-              onChange={setVoiceVolume}
-            />
-            <SliderTile
               label={strings.gapBetweenAudio}
               value={gapBetweenSec}
               min={0}
@@ -145,6 +135,15 @@ export function HomeScreen() {
               step={1}
               unit={strings.seconds}
               onChange={setGapBetweenSec}
+            />
+            <SliderTile
+              label={strings.voiceVolume}
+              value={voiceVolume}
+              min={0}
+              max={1}
+              step={0.01}
+              unit=""
+              onChange={setVoiceVolume}
             />
           </ExpandableCard>
         </div>
