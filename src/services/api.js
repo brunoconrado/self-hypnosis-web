@@ -247,6 +247,26 @@ class ApiService {
   isAuthenticated() {
     return !!this.accessToken;
   }
+
+  // Config endpoints
+  async getConfig() {
+    const response = await this.request('/api/config');
+    if (response.ok) {
+      return await response.json();
+    }
+    return null;
+  }
+
+  async updateConfig(config) {
+    const response = await this.request('/api/config', {
+      method: 'PUT',
+      body: JSON.stringify(config),
+    });
+    if (response.ok) {
+      return await response.json();
+    }
+    return null;
+  }
 }
 
 const api = new ApiService();
