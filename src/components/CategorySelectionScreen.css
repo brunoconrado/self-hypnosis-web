@@ -9,9 +9,53 @@
 
 /* Header */
 .category-header {
+  position: relative;
   padding: 2rem 1.5rem;
   text-align: center;
   background: linear-gradient(180deg, rgba(0, 191, 165, 0.1) 0%, transparent 100%);
+}
+
+/* User Menu */
+.user-menu {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-email {
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.6);
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.logout-btn:hover {
+  background: rgba(245, 101, 101, 0.2);
+  border-color: rgba(245, 101, 101, 0.4);
+  color: #fc8181;
+}
+
+.logout-btn .material-icons {
+  font-size: 1.125rem;
 }
 
 .header-content {
@@ -66,19 +110,10 @@
   background: #4fd1c5;
 }
 
-.app-logo {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 2rem;
-  font-weight: 700;
-  color: white;
+.header-logo {
+  height: 80px;
+  width: auto;
   margin-bottom: 0.5rem;
-}
-
-.logo-icon {
-  font-size: 2.5rem;
-  color: #4fd1c5;
 }
 
 .app-tagline {
@@ -456,6 +491,16 @@
 @media (max-width: 640px) {
   .category-header {
     padding: 1.5rem 1rem;
+    padding-top: 3.5rem;
+  }
+
+  .user-menu {
+    top: 0.75rem;
+    right: 0.75rem;
+  }
+
+  .user-email {
+    display: none;
   }
 
   .app-logo {

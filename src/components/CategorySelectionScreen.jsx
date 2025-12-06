@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useAffirmation } from '../providers/AffirmationProvider';
+import { useAuth } from '../providers/AuthProvider';
 import './CategorySelectionScreen.css';
 
 const CATEGORY_ICONS = {
@@ -29,6 +30,7 @@ const CATEGORY_NAMES = {
 
 export function CategorySelectionScreen({ onNext }) {
   const { playlist, categories, isLoading } = useAffirmation();
+  const { isAuthenticated, logout, user } = useAuth();
   const [selectedCategories, setSelectedCategories] = useState(new Set());
 
   // Group affirmations by category with counts
@@ -131,6 +133,14 @@ export function CategorySelectionScreen({ onNext }) {
     <div className="category-screen">
       {/* Header */}
       <header className="category-header">
+        {isAuthenticated && (
+          <div className="user-menu">
+            <span className="user-email">{user?.email}</span>
+            <button className="logout-btn" onClick={logout} title="Sair">
+              <span className="material-icons">logout</span>
+            </button>
+          </div>
+        )}
         <div className="header-content">
           <div className="step-indicator">
             <span className="step active">1</span>
@@ -139,10 +149,7 @@ export function CategorySelectionScreen({ onNext }) {
             <span className="step-line"></span>
             <span className="step">3</span>
           </div>
-          <h1 className="app-logo">
-            <span className="material-icons logo-icon">waves</span>
-            Hypnos
-          </h1>
+          <img src="/hypnos-icon.png" alt="Hypnos" className="header-logo" />
           <p className="app-tagline">Escolha as categorias para sua sessão</p>
         </div>
       </header>

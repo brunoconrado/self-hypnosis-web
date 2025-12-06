@@ -1,16 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../providers/AuthProvider';
 import './AuthScreen.css';
+
+const REMEMBERED_EMAIL_KEY = 'hypnos_remembered_email';
 
 export function AuthScreen({ onSkip }) {
   const { login, register, error, isLoading, clearError } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
+
+  useEffect(() => {
+    const savedEmail = localStorage.getItem(REMEMBERED_EMAIL_KEY);
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     clearError();
+
+    if (rememberMe) {
+      localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
+    } else {
+      localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+    }
 
     if (isLogin) {
       await login(email, password);
@@ -28,7 +45,7 @@ export function AuthScreen({ onSkip }) {
     <div className="auth-screen">
       <div className="auth-container">
         <div className="auth-header">
-          <h1>Hypnos</h1>
+          <img src="/hypnos-icon.png" alt="Hypnos" className="auth-logo" />
           <p>Binaural Beats & Affirmations</p>
         </div>
 
@@ -64,6 +81,19 @@ export function AuthScreen({ onSkip }) {
               required
               disabled={isLoading}
             />
+          </div>
+
+          <div className="form-group-checkbox">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                disabled={isLoading}
+              />
+              <span className="checkbox-custom"></span>
+              Remember my email
+            </label>
           </div>
 
           <button
