@@ -2,7 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../providers/AuthProvider';
 import './AuthScreen.css';
 
-const REMEMBERED_EMAIL_KEY = 'hypnos_remembered_email';
+const REMEMBER_ME_KEY = 'hypnos_remember_me';
+const SAVED_EMAIL_KEY = 'hypnos_saved_email';
+const SAVED_PASSWORD_KEY = 'hypnos_saved_password';
+
+// Simple obfuscation for password storage (not cryptographically secure, but better than plaintext)
+const obfuscate = (str) => btoa(encodeURIComponent(str));
+const deobfuscate = (str) => {
+  try {
+    return decodeURIComponent(atob(str));
+  } catch {
+    return '';
+  }
+};
 
 export function AuthScreen({ onSkip }) {
   const { login, register, error, isLoading, clearError } = useAuth();
@@ -12,9 +24,12 @@ export function AuthScreen({ onSkip }) {
   const [rememberMe, setRememberMe] = useState(false);
 
   useEffect(() => {
-    const savedEmail = localStorage.getItem(REMEMBERED_EMAIL_KEY);
-    if (savedEmail) {
-      setEmail(savedEmail);
+    const rememberMeEnabled = localStorage.getItem(REMEMBER_ME_KEY) === 'true';
+    if (rememberMeEnabled) {
+      const savedEmail = localStorage.getItem(SAVED_EMAIL_KEY);
+      const savedPassword = localStorage.getItem(SAVED_PASSWORD_KEY);
+      if (savedEmail) setEmail(savedEmail);
+      if (savedPassword) setPassword(deobfuscate(savedPassword));
       setRememberMe(true);
     }
   }, []);
@@ -23,10 +38,14 @@ export function AuthScreen({ onSkip }) {
     e.preventDefault();
     clearError();
 
+    // Save credentials if remember me is enabled
+    localStorage.setItem(REMEMBER_ME_KEY, rememberMe.toString());
     if (rememberMe) {
-      localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
+      localStorage.setItem(SAVED_EMAIL_KEY, email);
+      localStorage.setItem(SAVED_PASSWORD_KEY, obfuscate(password));
     } else {
-      localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+      localStorage.removeItem(SAVED_EMAIL_KEY);
+      localStorage.removeItem(SAVED_PASSWORD_KEY);
     }
 
     if (isLogin) {
@@ -46,11 +65,11 @@ export function AuthScreen({ onSkip }) {
       <div className="auth-container">
         <div className="auth-header">
           <img src="/hypnos-icon.png" alt="Hypnos" className="auth-logo" />
-          <p>Binaural Beats & Affirmations</p>
+          <p>Binaural Beats & Afirmações</p>
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
-          <h2>{isLogin ? 'Login' : 'Create Account'}</h2>
+          <h2>{isLogin ? 'Entrar' : 'Criar Conta'}</h2>
 
           {error && (
             <div className="auth-error">{error}</div>
@@ -63,20 +82,22 @@ export function AuthScreen({ onSkip }) {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="your@email.com"
+              placeholder="seu@email.com"
+              autoComplete="email"
               required
               disabled={isLoading}
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">Senha</label>
             <input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Min 6 characters"
+              placeholder="Mínimo 6 caracteres"
+              autoComplete={isLogin ? "current-password" : "new-password"}
               minLength={6}
               required
               disabled={isLoading}
@@ -92,7 +113,7 @@ export function AuthScreen({ onSkip }) {
                 disabled={isLoading}
               />
               <span className="checkbox-custom"></span>
-              Remember my email
+              Lembrar-me
             </label>
           </div>
 
@@ -101,7 +122,7 @@ export function AuthScreen({ onSkip }) {
             className="auth-button primary"
             disabled={isLoading}
           >
-            {isLoading ? 'Loading...' : isLogin ? 'Login' : 'Create Account'}
+            {isLoading ? 'Carregando...' : isLogin ? 'Entrar' : 'Criar Conta'}
           </button>
 
           <button
@@ -110,7 +131,7 @@ export function AuthScreen({ onSkip }) {
             onClick={toggleMode}
             disabled={isLoading}
           >
-            {isLogin ? 'Need an account? Register' : 'Have an account? Login'}
+            {isLogin ? 'Não tem conta? Registre-se' : 'Já tem conta? Entre'}
           </button>
         </form>
 
@@ -119,7 +140,7 @@ export function AuthScreen({ onSkip }) {
           onClick={onSkip}
           disabled={isLoading}
         >
-          Continue without account
+          Continuar sem conta
         </button>
       </div>
     </div>
