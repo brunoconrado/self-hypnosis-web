@@ -6,6 +6,23 @@ import { BinauralBeatSlider } from './BinauralBeatSlider';
 import { strings } from '../data/strings';
 import './PlayerScreen.css';
 
+// Session phases
+const PHASES = {
+  INDUCTION: 'induction',
+  DEEPENING: 'deepening',
+  AFFIRMATIONS: 'affirmations',
+  AWAKENING: 'awakening',
+  COMPLETE: 'complete'
+};
+
+const PHASE_INFO = {
+  [PHASES.INDUCTION]: { title: 'Indução', icon: 'self_improvement' },
+  [PHASES.DEEPENING]: { title: 'Aprofundamento', icon: 'spa' },
+  [PHASES.AFFIRMATIONS]: { title: 'Afirmações', icon: 'record_voice_over' },
+  [PHASES.AWAKENING]: { title: 'Despertar', icon: 'wb_sunny' },
+  [PHASES.COMPLETE]: { title: 'Sessão Completa', icon: 'check_circle' }
+};
+
 // Shuffle array helper
 const shuffleArray = (array) => {
   const shuffled = [...array];
@@ -47,10 +64,22 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
   const [audioElement, setAudioElement] = useState(null);
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
   const [loopEnabled, setLoopEnabled] = useState(false);
-  const [isStartingDelay, setIsStartingDelay] = useState(false);
-  const [startingDelaySeconds] = useState(5); // Starting delay in seconds
+
+  // Phase management
+  const [currentPhase, setCurrentPhase] = useState(PHASES.INDUCTION);
+  const [scriptText, setScriptText] = useState('');
+  const [scriptProgress, setScriptProgress] = useState(0);
+  const scriptTimerRef = useRef(null);
+
+  // Audio progress within current item (0 to 1)
+  const [audioProgress, setAudioProgress] = useState(0);
 
   const isPlaying = isAudioPlaying || localIsPlaying;
+
+  // Check if we have scripts
+  const hasInduction = sessionConfig?.induction?.text;
+  const hasDeepening = sessionConfig?.deepening?.text;
+  const hasAwakening = sessionConfig?.awakening?.text;
 
   // Initialize session items from config
   useEffect(() => {
@@ -60,6 +89,120 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
       setLocalCurrentIndex(0);
     }
   }, [sessionConfig]);
+
+  // Script audio element ref
+  const scriptAudioRef = useRef(null);
+
+  // Play a script phase (plays audio if available, shows text, advances after audio ends)
+  const playScriptPhase = useCallback((script, nextPhase) => {
+    if (!script?.text) {
+      setCurrentPhase(nextPhase);
+      return;
+    }
+
+    setScriptText(script.text);
+    setScriptProgress(0);
+
+    // Clear any existing timer
+    if (scriptTimerRef.current) {
+      clearInterval(scriptTimerRef.current);
+      scriptTimerRef.current = null;
+    }
+
+    // Stop any existing script audio
+    if (scriptAudioRef.current) {
+      scriptAudioRef.current.pause();
+      scriptAudioRef.current = null;
+    }
+
+    // If script has audio, play it
+    if (script.audio_url) {
+      const audioUrl = script.audio_url.startsWith('http')
+        ? script.audio_url
+        : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${script.audio_url}`;
+
+      const audio = new Audio(audioUrl);
+      audio.volume = voiceVolumeRef.current;
+      scriptAudioRef.current = audio;
+
+      // Track progress
+      audio.ontimeupdate = () => {
+        if (audio.duration > 0) {
+          setScriptProgress((audio.currentTime / audio.duration) * 100);
+        }
+      };
+
+      // When audio ends, advance to next phase
+      audio.onended = () => {
+        setScriptText('');
+        setScriptProgress(0);
+        scriptAudioRef.current = null;
+        setCurrentPhase(nextPhase);
+      };
+
+      audio.onerror = () => {
+        console.error('Script audio failed to load:', audioUrl);
+        // Fallback to timer-based approach
+        const duration = (script.duration_estimate_sec || 60) * 1000;
+        const updateInterval = 100;
+        let elapsed = 0;
+
+        scriptTimerRef.current = setInterval(() => {
+          elapsed += updateInterval;
+          setScriptProgress((elapsed / duration) * 100);
+
+          if (elapsed >= duration) {
+            clearInterval(scriptTimerRef.current);
+            scriptTimerRef.current = null;
+            setScriptText('');
+            setScriptProgress(0);
+            setCurrentPhase(nextPhase);
+          }
+        }, updateInterval);
+      };
+
+      audio.play().catch(err => {
+        console.error('Failed to play script audio:', err);
+        // Trigger error handler fallback
+        audio.onerror();
+      });
+    } else {
+      // No audio, use timer-based approach
+      const duration = (script.duration_estimate_sec || 60) * 1000;
+      const updateInterval = 100;
+      let elapsed = 0;
+
+      scriptTimerRef.current = setInterval(() => {
+        elapsed += updateInterval;
+        setScriptProgress((elapsed / duration) * 100);
+
+        if (elapsed >= duration) {
+          clearInterval(scriptTimerRef.current);
+          scriptTimerRef.current = null;
+          setScriptText('');
+          setScriptProgress(0);
+          setCurrentPhase(nextPhase);
+        }
+      }, updateInterval);
+    }
+  }, []);
+
+  // Handle phase transitions
+  useEffect(() => {
+    if (!localIsPlaying) return;
+
+    if (currentPhase === PHASES.INDUCTION && hasInduction) {
+      playScriptPhase(sessionConfig.induction, PHASES.DEEPENING);
+    } else if (currentPhase === PHASES.INDUCTION && !hasInduction) {
+      setCurrentPhase(PHASES.DEEPENING);
+    } else if (currentPhase === PHASES.DEEPENING && hasDeepening) {
+      playScriptPhase(sessionConfig.deepening, PHASES.AFFIRMATIONS);
+    } else if (currentPhase === PHASES.DEEPENING && !hasDeepening) {
+      setCurrentPhase(PHASES.AFFIRMATIONS);
+    }
+    // Affirmations phase is handled by existing audio playback logic
+    // Awakening is triggered when affirmations complete
+  }, [currentPhase, localIsPlaying, hasInduction, hasDeepening, sessionConfig, playScriptPhase]);
 
   // Handle shuffle toggle
   const handleShuffleToggle = () => {
@@ -87,11 +230,17 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
       // Loop back to start
       setLocalCurrentIndex(0);
     } else {
-      // Session complete
-      setLocalIsPlaying(false);
-      stopAudio();
+      // Affirmations complete - go to awakening
+      if (hasAwakening) {
+        setCurrentPhase(PHASES.AWAKENING);
+        playScriptPhase(sessionConfig?.awakening, PHASES.COMPLETE);
+      } else {
+        setCurrentPhase(PHASES.COMPLETE);
+        setLocalIsPlaying(false);
+        stopAudio();
+      }
     }
-  }, [localCurrentIndex, localSessionItems.length, loopEnabled, stopAudio]);
+  }, [localCurrentIndex, localSessionItems.length, loopEnabled, stopAudio, hasAwakening, sessionConfig, playScriptPhase]);
 
   // Refs to access current values without re-triggering effect
   const gapBetweenSecRef = useRef(gapBetweenSec);
@@ -105,11 +254,14 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
     voiceVolumeRef.current = voiceVolume;
   }, [voiceVolume]);
 
-  // Play current audio
+  // Play current audio (only during affirmations phase)
   useEffect(() => {
     if (!localIsPlaying || localSessionItems.length === 0) return;
+    if (currentPhase !== PHASES.AFFIRMATIONS) return;
 
     const item = localSessionItems[localCurrentIndex];
+    setAudioProgress(0);
+
     if (!item?.audioUrl) {
       // No audio, skip after gap
       const timer = setTimeout(playNextAudio, (gapBetweenSecRef.current + 3) * 1000);
@@ -120,9 +272,17 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
     audio.volume = voiceVolumeRef.current;
     setAudioElement(audio);
 
+    // Track audio progress
+    audio.ontimeupdate = () => {
+      if (audio.duration > 0) {
+        setAudioProgress(audio.currentTime / audio.duration);
+      }
+    };
+
     audio.play().catch(console.error);
 
     audio.onended = () => {
+      setAudioProgress(1);
       setTimeout(playNextAudio, gapBetweenSecRef.current * 1000);
     };
 
@@ -130,75 +290,124 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
       audio.pause();
       audio.src = '';
     };
-  }, [localIsPlaying, localCurrentIndex, localSessionItems, playNextAudio]);
+  }, [localIsPlaying, localCurrentIndex, localSessionItems, playNextAudio, currentPhase]);
 
   // Update audio volume when changed (seamlessly)
   useEffect(() => {
     if (audioElement) {
       audioElement.volume = voiceVolume;
     }
+    if (scriptAudioRef.current) {
+      scriptAudioRef.current.volume = voiceVolume;
+    }
   }, [voiceVolume, audioElement]);
 
-  const startDelayTimerRef = useRef(null);
-
   const handlePlay = useCallback(() => {
-    if (localIsPlaying || isStartingDelay) {
+    if (localIsPlaying) {
       // Stop everything
       setLocalIsPlaying(false);
-      setIsStartingDelay(false);
+      setCurrentPhase(PHASES.INDUCTION);
+      setScriptText('');
+      setScriptProgress(0);
+      setAudioProgress(0);
       stopAudio();
       if (audioElement) {
         audioElement.pause();
       }
-      if (startDelayTimerRef.current) {
-        clearTimeout(startDelayTimerRef.current);
-        startDelayTimerRef.current = null;
+      if (scriptAudioRef.current) {
+        scriptAudioRef.current.pause();
+        scriptAudioRef.current = null;
+      }
+      if (scriptTimerRef.current) {
+        clearInterval(scriptTimerRef.current);
+        scriptTimerRef.current = null;
       }
     } else {
       if (localSessionItems.length === 0) return;
       playAudio();
-
-      // Start with delay
-      setIsStartingDelay(true);
       setLocalCurrentIndex(0);
+      setAudioProgress(0);
+      setLocalIsPlaying(true);
 
-      startDelayTimerRef.current = setTimeout(() => {
-        setIsStartingDelay(false);
-        setLocalIsPlaying(true);
-      }, startingDelaySeconds * 1000);
+      // Start with induction if available, otherwise go to next phase
+      if (hasInduction) {
+        setCurrentPhase(PHASES.INDUCTION);
+      } else if (hasDeepening) {
+        setCurrentPhase(PHASES.DEEPENING);
+      } else {
+        setCurrentPhase(PHASES.AFFIRMATIONS);
+      }
     }
-  }, [localIsPlaying, isStartingDelay, localSessionItems, playAudio, stopAudio, audioElement, startingDelaySeconds]);
+  }, [localIsPlaying, localSessionItems, playAudio, stopAudio, audioElement, hasInduction, hasDeepening]);
 
   const handleBack = useCallback(() => {
     setLocalIsPlaying(false);
-    setIsStartingDelay(false);
+    setCurrentPhase(PHASES.INDUCTION);
+    setScriptText('');
+    setScriptProgress(0);
     stopAudio();
     if (audioElement) {
       audioElement.pause();
     }
-    if (startDelayTimerRef.current) {
-      clearTimeout(startDelayTimerRef.current);
+    if (scriptAudioRef.current) {
+      scriptAudioRef.current.pause();
+      scriptAudioRef.current = null;
+    }
+    if (scriptTimerRef.current) {
+      clearInterval(scriptTimerRef.current);
     }
     onBack();
   }, [stopAudio, onBack, audioElement]);
 
   const handleEndSession = useCallback(() => {
     setLocalIsPlaying(false);
-    setIsStartingDelay(false);
+    setCurrentPhase(PHASES.INDUCTION);
+    setScriptText('');
+    setScriptProgress(0);
     stopAudio();
     if (audioElement) {
       audioElement.pause();
     }
-    if (startDelayTimerRef.current) {
-      clearTimeout(startDelayTimerRef.current);
+    if (scriptAudioRef.current) {
+      scriptAudioRef.current.pause();
+      scriptAudioRef.current = null;
+    }
+    if (scriptTimerRef.current) {
+      clearInterval(scriptTimerRef.current);
     }
     onEndSession();
   }, [stopAudio, onEndSession, audioElement]);
 
   const canPlay = localSessionItems.length > 0;
-  const progress = localSessionItems.length > 0
-    ? ((localCurrentIndex + 1) / localSessionItems.length) * 100
-    : 0;
+
+  // Calculate total session progress across all phases
+  const totalProgress = useMemo(() => {
+    // Each phase gets a portion of the total progress
+    // Induction: 0-20%, Deepening: 20-40%, Affirmations: 40-90%, Awakening: 90-100%
+    const phaseWeights = {
+      [PHASES.INDUCTION]: { start: 0, end: 20 },
+      [PHASES.DEEPENING]: { start: 20, end: 40 },
+      [PHASES.AFFIRMATIONS]: { start: 40, end: 90 },
+      [PHASES.AWAKENING]: { start: 90, end: 100 },
+      [PHASES.COMPLETE]: { start: 100, end: 100 }
+    };
+
+    const currentWeight = phaseWeights[currentPhase];
+    if (!currentWeight) return 0;
+
+    if (currentPhase === PHASES.COMPLETE) return 100;
+
+    if (currentPhase === PHASES.AFFIRMATIONS) {
+      // During affirmations, calculate based on current item + audio progress
+      const affirmationProgress = localSessionItems.length > 0
+        ? (localCurrentIndex + audioProgress) / localSessionItems.length
+        : 0;
+      return currentWeight.start + (currentWeight.end - currentWeight.start) * affirmationProgress;
+    }
+
+    // During script phases (induction, deepening, awakening), use scriptProgress
+    return currentWeight.start + (currentWeight.end - currentWeight.start) * (scriptProgress / 100);
+  }, [currentPhase, localCurrentIndex, audioProgress, localSessionItems.length, scriptProgress]);
 
   // Estimated session duration
   const estimatedDuration = useMemo(() => {
@@ -218,56 +427,66 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
     <div className="player-screen">
       {/* Header */}
       <header className="player-header">
-        <button className="back-button" onClick={handleBack}>
-          <span className="material-icons">arrow_back</span>
-        </button>
+        <div className="header-row">
+          <div className="header-left">
+            <button className="icon-btn" onClick={handleBack}>
+              <span className="material-icons">arrow_back</span>
+            </button>
+            <div className="header-info">
+              <div className="info-item">
+                <span className="material-icons">format_list_numbered</span>
+                <span>{localSessionItems.length} sugestões</span>
+              </div>
+              <div className="info-item">
+                <span className="material-icons">schedule</span>
+                <span>~{formatTime(estimatedDuration)}</span>
+              </div>
+            </div>
+          </div>
 
-        <div className="step-indicator">
-          <span className="step completed">1</span>
-          <span className="step-line completed"></span>
-          <span className="step completed">2</span>
-          <span className="step-line completed"></span>
-          <span className="step active">3</span>
+          <div className="header-right">
+            <button
+              className={`icon-btn ${shuffleEnabled ? 'active' : ''}`}
+              onClick={handleShuffleToggle}
+              title={shuffleEnabled ? 'Desativar aleatório' : 'Ativar aleatório'}
+            >
+              <span className="material-icons">shuffle</span>
+            </button>
+            <button
+              className={`icon-btn ${loopEnabled ? 'active' : ''}`}
+              onClick={() => setLoopEnabled(!loopEnabled)}
+              title={loopEnabled ? 'Desativar repetição' : 'Ativar repetição'}
+            >
+              <span className="material-icons">repeat</span>
+            </button>
+            <button
+              className={`icon-btn ${showSettings ? 'active' : ''}`}
+              onClick={() => setShowSettings(!showSettings)}
+            >
+              <span className="material-icons">tune</span>
+            </button>
+          </div>
         </div>
 
-        <button
-          className={`settings-button ${showSettings ? 'active' : ''}`}
-          onClick={() => setShowSettings(!showSettings)}
-        >
-          <span className="material-icons">tune</span>
-        </button>
+        {/* Phase Indicator */}
+        <div className="phase-steps">
+          <div className={`phase-step ${currentPhase === PHASES.INDUCTION ? 'active' : ''} ${[PHASES.DEEPENING, PHASES.AFFIRMATIONS, PHASES.AWAKENING, PHASES.COMPLETE].includes(currentPhase) ? 'completed' : ''}`}>
+            <span className="material-icons">self_improvement</span>
+          </div>
+          <div className="phase-connector"></div>
+          <div className={`phase-step ${currentPhase === PHASES.DEEPENING ? 'active' : ''} ${[PHASES.AFFIRMATIONS, PHASES.AWAKENING, PHASES.COMPLETE].includes(currentPhase) ? 'completed' : ''}`}>
+            <span className="material-icons">spa</span>
+          </div>
+          <div className="phase-connector"></div>
+          <div className={`phase-step ${currentPhase === PHASES.AFFIRMATIONS ? 'active' : ''} ${[PHASES.AWAKENING, PHASES.COMPLETE].includes(currentPhase) ? 'completed' : ''}`}>
+            <span className="material-icons">record_voice_over</span>
+          </div>
+          <div className="phase-connector"></div>
+          <div className={`phase-step ${currentPhase === PHASES.AWAKENING ? 'active' : ''} ${currentPhase === PHASES.COMPLETE ? 'completed' : ''}`}>
+            <span className="material-icons">wb_sunny</span>
+          </div>
+        </div>
       </header>
-
-      {/* Session Stats */}
-      <div className="session-stats">
-        <div className="stats-info">
-          <div className="stat-item">
-            <span className="material-icons">format_list_numbered</span>
-            <span>{localSessionItems.length} sugestões</span>
-          </div>
-          <div className="stat-item">
-            <span className="material-icons">schedule</span>
-            <span>~{formatTime(estimatedDuration)}</span>
-          </div>
-        </div>
-
-        <div className="playback-controls">
-          <button
-            className={`control-btn ${shuffleEnabled ? 'active' : ''}`}
-            onClick={handleShuffleToggle}
-            title={shuffleEnabled ? 'Desativar aleatório' : 'Ativar aleatório'}
-          >
-            <span className="material-icons">shuffle</span>
-          </button>
-          <button
-            className={`control-btn ${loopEnabled ? 'active' : ''}`}
-            onClick={() => setLoopEnabled(!loopEnabled)}
-            title={loopEnabled ? 'Desativar repetição' : 'Ativar repetição'}
-          >
-            <span className="material-icons">repeat</span>
-          </button>
-        </div>
-      </div>
 
       {/* Main Content */}
       <main className="player-main">
@@ -290,48 +509,77 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
               fill="none"
               strokeWidth="4"
               strokeDasharray={`${2 * Math.PI * 90}`}
-              strokeDashoffset={`${2 * Math.PI * 90 * (1 - progress / 100)}`}
+              strokeDashoffset={`${2 * Math.PI * 90 * (1 - totalProgress / 100)}`}
             />
           </svg>
 
           <div className="progress-content">
             {/* Play Button */}
             <button
-              className={`play-button ${localIsPlaying ? 'playing' : ''} ${isStartingDelay ? 'starting' : ''}`}
+              className={`play-button ${localIsPlaying ? 'playing' : ''}`}
               onClick={handlePlay}
               disabled={!canPlay}
             >
               <span className="material-icons">
-                {(localIsPlaying || isStartingDelay) ? 'pause' : 'play_arrow'}
+                {localIsPlaying ? 'pause' : 'play_arrow'}
               </span>
             </button>
           </div>
         </div>
 
-        {/* Session Playlist */}
-        <div className="playlist-preview">
-          <h3 className="preview-title">
-            <span className="material-icons">queue_music</span>
-            Sugestões da Sessão
-          </h3>
-          <div className="preview-list">
-            {localSessionItems.map((item, index) => (
-              <div
-                key={item.id}
-                className={`preview-item ${index === localCurrentIndex && localIsPlaying ? 'active' : ''} ${index < localCurrentIndex ? 'completed' : ''}`}
-              >
-                <span className="item-number">
-                  {index < localCurrentIndex ? (
-                    <span className="material-icons">check</span>
-                  ) : (
-                    index + 1
-                  )}
-                </span>
-                <span className="item-text">{item.text}</span>
-              </div>
-            ))}
+        {/* Script Display (for induction/deepening/awakening) */}
+        {scriptText && (
+          <div className="script-display">
+            <div className="script-progress-bar">
+              <div className="script-progress-fill" style={{ width: `${scriptProgress}%` }}></div>
+            </div>
+            <div className="script-text">
+              {scriptText.split('\n\n').map((paragraph, idx) => (
+                <p key={idx}>{paragraph}</p>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Session Complete */}
+        {currentPhase === PHASES.COMPLETE && (
+          <div className="session-complete">
+            <span className="material-icons complete-icon">check_circle</span>
+            <h2>Sessão Completa!</h2>
+            <p>Parabéns por completar sua sessão de auto-hipnose.</p>
+            <button className="restart-btn" onClick={handleEndSession}>
+              <span className="material-icons">replay</span>
+              Nova Sessão
+            </button>
+          </div>
+        )}
+
+        {/* Session Playlist (only show during affirmations or when not playing) */}
+        {(currentPhase === PHASES.AFFIRMATIONS || !localIsPlaying) && !scriptText && currentPhase !== PHASES.COMPLETE && (
+          <div className="playlist-preview">
+            <h3 className="preview-title">
+              <span className="material-icons">queue_music</span>
+              Sugestões da Sessão
+            </h3>
+            <div className="preview-list">
+              {localSessionItems.map((item, index) => (
+                <div
+                  key={item.id}
+                  className={`preview-item ${index === localCurrentIndex && localIsPlaying && currentPhase === PHASES.AFFIRMATIONS ? 'active' : ''} ${index < localCurrentIndex && currentPhase === PHASES.AFFIRMATIONS ? 'completed' : ''}`}
+                >
+                  <span className="item-number">
+                    {index < localCurrentIndex && currentPhase === PHASES.AFFIRMATIONS ? (
+                      <span className="material-icons">check</span>
+                    ) : (
+                      index + 1
+                    )}
+                  </span>
+                  <span className="item-text">{item.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Settings Panel */}
