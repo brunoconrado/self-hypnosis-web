@@ -3,7 +3,8 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+  background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+  color: white;
   position: relative;
   overflow: hidden;
 }
@@ -11,153 +12,114 @@
 /* Header */
 .player-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.5rem;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
   background: rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   position: relative;
   z-index: 10;
 }
 
-.back-button,
-.settings-button {
-  width: 44px;
-  height: 44px;
+.player-header .header-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  color: rgba(255, 255, 255, 0.8);
-  cursor: pointer;
-  transition: all 0.2s ease;
+  justify-content: space-between;
 }
 
-.back-button:hover,
-.settings-button:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: white;
+.player-header .header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
-.settings-button.active {
-  background: rgba(79, 209, 197, 0.2);
-  border-color: rgba(79, 209, 197, 0.4);
+.player-header .header-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.player-header .header-info .info-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.player-header .header-info .info-item .material-icons {
+  font-size: 1rem;
   color: #4fd1c5;
 }
 
-/* Step Indicator */
-.player-header .step-indicator {
+.player-header .header-right {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0;
+  gap: 0.5rem;
 }
 
-.player-header .step {
-  width: 28px;
-  height: 28px;
+.player-header .icon-btn {
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(255, 255, 255, 0.1);
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.player-header .step.active {
-  background: linear-gradient(135deg, #4fd1c5 0%, #38b2ac 100%);
-  border-color: transparent;
-  color: #0f0f1a;
-}
-
-.player-header .step.completed {
-  background: rgba(79, 209, 197, 0.2);
-  border-color: #4fd1c5;
-  color: #4fd1c5;
-}
-
-.player-header .step-line {
-  width: 24px;
-  height: 2px;
-  background: rgba(255, 255, 255, 0.2);
-  margin: 0 0.25rem;
-}
-
-.player-header .step-line.completed {
-  background: #4fd1c5;
-}
-
-/* Session Stats */
-.session-stats {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 1.5rem;
-  background: rgba(255, 255, 255, 0.03);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  max-width: 900px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-.stats-info {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
+  border: none;
+  border-radius: 8px;
   color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.stat-item .material-icons {
-  font-size: 1.125rem;
+.player-header .icon-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+.player-header .icon-btn.active {
+  background: rgba(79, 209, 197, 0.2);
   color: #4fd1c5;
 }
 
-/* Playback Controls */
-.playback-controls {
+/* Phase Steps in Header */
+.player-header .phase-steps {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
 }
 
-.control-btn {
+.player-header .phase-step {
   width: 40px;
   height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  color: rgba(255, 255, 255, 0.6);
-  cursor: pointer;
-  transition: all 0.2s ease;
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.4);
+  transition: color 0.3s ease;
 }
 
-.control-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: white;
+.player-header .phase-step .material-icons {
+  font-size: 1.25rem;
 }
 
-.control-btn.active {
-  background: rgba(79, 209, 197, 0.2);
-  border-color: rgba(79, 209, 197, 0.4);
+.player-header .phase-step.active {
   color: #4fd1c5;
 }
 
-.control-btn .material-icons {
-  font-size: 1.25rem;
+.player-header .phase-step.completed {
+  color: #48bb78;
+}
+
+.player-header .phase-connector {
+  width: 24px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* Main Content */
@@ -201,7 +163,7 @@
 .progress-bar {
   stroke: #4fd1c5;
   stroke-linecap: round;
-  transition: stroke-dashoffset 0.5s ease;
+  transition: stroke-dashoffset 0.1s linear;
 }
 
 /* Play Button */
@@ -628,5 +590,140 @@
   .end-session-btn {
     width: 100%;
     justify-content: center;
+  }
+}
+
+/* Script Display */
+.script-display {
+  width: 100%;
+  max-width: 600px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+.script-progress-bar {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.script-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4fd1c5, #38b2ac);
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}
+
+.script-text {
+  max-height: 300px;
+  overflow-y: auto;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.8;
+  font-size: 1.1rem;
+}
+
+.script-text p {
+  margin-bottom: 1rem;
+}
+
+.script-text p:last-child {
+  margin-bottom: 0;
+}
+
+/* Session Complete */
+.session-complete {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+  gap: 1rem;
+}
+
+.complete-icon {
+  font-size: 4rem;
+  color: #48bb78;
+  animation: bounce-complete 1s ease;
+}
+
+@keyframes bounce-complete {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+.session-complete h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: white;
+  margin: 0;
+}
+
+.session-complete p {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+}
+
+.restart-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #4fd1c5, #38b2ac);
+  border: none;
+  border-radius: 25px;
+  color: #0f0f1a;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 1rem;
+}
+
+.restart-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 15px rgba(79, 209, 197, 0.4);
+}
+
+.restart-btn .material-icons {
+  font-size: 1.25rem;
+}
+
+/* Responsive - Phase & Script */
+@media (max-width: 640px) {
+  .player-header .phase-steps {
+    gap: 0.25rem;
+  }
+
+  .player-header .phase-step {
+    width: 32px;
+    height: 32px;
+  }
+
+  .player-header .phase-step .material-icons {
+    font-size: 1rem;
+  }
+
+  .player-header .phase-connector {
+    width: 16px;
+  }
+
+  .script-display {
+    padding: 1rem;
+  }
+
+  .script-text {
+    font-size: 1rem;
+    max-height: 250px;
   }
 }

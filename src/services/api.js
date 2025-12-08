@@ -267,6 +267,47 @@ class ApiService {
     }
     return null;
   }
+
+  // Scripts (public endpoints)
+  async getScripts(type = null, language = 'pt-BR') {
+    try {
+      let url = `${API_BASE_URL}/api/scripts?language=${language}`;
+      if (type) {
+        url += `&type=${type}`;
+      }
+      const response = await fetch(url);
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (err) {
+      console.error('[API] Scripts fetch failed:', err);
+    }
+    return [];
+  }
+
+  async getInductions(language = 'pt-BR') {
+    return this.getScripts('induction', language);
+  }
+
+  async getDeepenings(language = 'pt-BR') {
+    return this.getScripts('deepening', language);
+  }
+
+  async getAwakenings(language = 'pt-BR') {
+    return this.getScripts('awakening', language);
+  }
+
+  async getScriptById(scriptId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/scripts/${scriptId}`);
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (err) {
+      console.error('[API] Script fetch failed:', err);
+    }
+    return null;
+  }
 }
 
 const api = new ApiService();
