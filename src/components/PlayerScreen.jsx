@@ -8,6 +8,7 @@ import './PlayerScreen.css';
 
 // Session phases
 const PHASES = {
+  PREPARING: 'preparing',  // Initial delay before starting
   INDUCTION: 'induction',
   DEEPENING: 'deepening',
   AFFIRMATIONS: 'affirmations',
@@ -16,6 +17,7 @@ const PHASES = {
 };
 
 const PHASE_INFO = {
+  [PHASES.PREPARING]: { title: 'Indução', icon: 'self_improvement' },
   [PHASES.INDUCTION]: { title: 'Indução', icon: 'self_improvement' },
   [PHASES.DEEPENING]: { title: 'Aprofundamento', icon: 'spa' },
   [PHASES.AFFIRMATIONS]: { title: 'Afirmações', icon: 'record_voice_over' },
@@ -64,9 +66,10 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
   const [audioElement, setAudioElement] = useState(null);
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
   const [loopEnabled, setLoopEnabled] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
 
   // Phase management
-  const [currentPhase, setCurrentPhase] = useState(PHASES.INDUCTION);
+  const [currentPhase, setCurrentPhase] = useState(PHASES.PREPARING);
   const [scriptText, setScriptText] = useState('');
   const [scriptProgress, setScriptProgress] = useState(0);
   const scriptTimerRef = useRef(null);
@@ -96,10 +99,28 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
   // Current audio element ref (for both scripts and affirmations)
   const currentAudioRef = useRef(null);
 
+  // Transition delay between phases (in ms)
+  const PHASE_TRANSITION_DELAY = 3000;
+  const transitionTimerRef = useRef(null);
+
+  // Helper to advance to next phase with delay
+  const advanceToPhase = useCallback((nextPhase) => {
+    // Clear script state
+    setScriptText('');
+    setScriptProgress(0);
+    scriptAudioRef.current = null;
+    currentAudioRef.current = null;
+
+    // Add delay before transitioning to next phase
+    transitionTimerRef.current = setTimeout(() => {
+      setCurrentPhase(nextPhase);
+    }, PHASE_TRANSITION_DELAY);
+  }, []);
+
   // Play a script phase (plays audio if available, shows text, advances after audio ends)
   const playScriptPhase = useCallback((script, nextPhase) => {
     if (!script?.text) {
-      setCurrentPhase(nextPhase);
+      advanceToPhase(nextPhase);
       return;
     }
 
@@ -126,8 +147,9 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
 
       const audio = new Audio(audioUrl);
       audio.volume = voiceVolumeRef.current;
+      audio.playbackRate = playbackSpeedRef.current;
       scriptAudioRef.current = audio;
-      currentAudioRef.current = audio; // Track for volume updates
+      currentAudioRef.current = audio; // Track for volume/speed updates
 
       // Track progress
       audio.ontimeupdate = () => {
@@ -136,13 +158,9 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
         }
       };
 
-      // When audio ends, advance to next phase
+      // When audio ends, advance to next phase with delay
       audio.onended = () => {
-        setScriptText('');
-        setScriptProgress(0);
-        scriptAudioRef.current = null;
-        currentAudioRef.current = null;
-        setCurrentPhase(nextPhase);
+        advanceToPhase(nextPhase);
       };
 
       audio.onerror = () => {
@@ -160,9 +178,7 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
           if (elapsed >= duration) {
             clearInterval(scriptTimerRef.current);
             scriptTimerRef.current = null;
-            setScriptText('');
-            setScriptProgress(0);
-            setCurrentPhase(nextPhase);
+            advanceToPhase(nextPhase);
           }
         }, updateInterval);
       };
@@ -185,13 +201,11 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
         if (elapsed >= duration) {
           clearInterval(scriptTimerRef.current);
           scriptTimerRef.current = null;
-          setScriptText('');
-          setScriptProgress(0);
-          setCurrentPhase(nextPhase);
+          advanceToPhase(nextPhase);
         }
       }, updateInterval);
     }
-  }, []);
+  }, [advanceToPhase]);
 
   // Handle phase transitions
   useEffect(() => {
@@ -236,14 +250,19 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
       // Loop back to start
       setLocalCurrentIndex(0);
     } else {
-      // Affirmations complete - go to awakening
+      // Affirmations complete - go to awakening with delay
       if (hasAwakening) {
-        setCurrentPhase(PHASES.AWAKENING);
-        playScriptPhase(sessionConfig?.awakening, PHASES.COMPLETE);
+        // Add delay before transitioning to awakening
+        transitionTimerRef.current = setTimeout(() => {
+          setCurrentPhase(PHASES.AWAKENING);
+          playScriptPhase(sessionConfig?.awakening, PHASES.COMPLETE);
+        }, PHASE_TRANSITION_DELAY);
       } else {
-        setCurrentPhase(PHASES.COMPLETE);
-        setLocalIsPlaying(false);
-        stopAudio();
+        transitionTimerRef.current = setTimeout(() => {
+          setCurrentPhase(PHASES.COMPLETE);
+          setLocalIsPlaying(false);
+          stopAudio();
+        }, PHASE_TRANSITION_DELAY);
       }
     }
   }, [localCurrentIndex, localSessionItems.length, loopEnabled, stopAudio, hasAwakening, sessionConfig, playScriptPhase]);
@@ -251,6 +270,7 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
   // Refs to access current values without re-triggering effect
   const gapBetweenSecRef = useRef(gapBetweenSec);
   const voiceVolumeRef = useRef(voiceVolume);
+  const playbackSpeedRef = useRef(playbackSpeed);
 
   useEffect(() => {
     gapBetweenSecRef.current = gapBetweenSec;
@@ -259,6 +279,10 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
   useEffect(() => {
     voiceVolumeRef.current = voiceVolume;
   }, [voiceVolume]);
+
+  useEffect(() => {
+    playbackSpeedRef.current = playbackSpeed;
+  }, [playbackSpeed]);
 
   // Play current audio (only during affirmations phase)
   useEffect(() => {
@@ -276,8 +300,9 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
 
     const audio = new Audio(item.audioUrl);
     audio.volume = voiceVolumeRef.current;
+    audio.playbackRate = playbackSpeedRef.current;
     setAudioElement(audio);
-    currentAudioRef.current = audio; // Track for volume updates
+    currentAudioRef.current = audio; // Track for volume/speed updates
 
     // Track audio progress
     audio.ontimeupdate = () => {
@@ -316,11 +341,24 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
     }
   }, [voiceVolume, audioElement]);
 
+  // Update playback speed when changed - applies to ALL audio
+  useEffect(() => {
+    if (currentAudioRef.current) {
+      currentAudioRef.current.playbackRate = playbackSpeed;
+    }
+    if (audioElement) {
+      audioElement.playbackRate = playbackSpeed;
+    }
+    if (scriptAudioRef.current) {
+      scriptAudioRef.current.playbackRate = playbackSpeed;
+    }
+  }, [playbackSpeed, audioElement]);
+
   const handlePlay = useCallback(() => {
     if (localIsPlaying) {
       // Stop everything
       setLocalIsPlaying(false);
-      setCurrentPhase(PHASES.INDUCTION);
+      setCurrentPhase(PHASES.PREPARING);
       setScriptText('');
       setScriptProgress(0);
       setAudioProgress(0);
@@ -340,27 +378,35 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
         clearInterval(scriptTimerRef.current);
         scriptTimerRef.current = null;
       }
+      if (transitionTimerRef.current) {
+        clearTimeout(transitionTimerRef.current);
+        transitionTimerRef.current = null;
+      }
     } else {
       if (localSessionItems.length === 0) return;
       playAudio();
       setLocalCurrentIndex(0);
       setAudioProgress(0);
       setLocalIsPlaying(true);
+      setCurrentPhase(PHASES.PREPARING);
 
-      // Start with induction if available, otherwise go to next phase
-      if (hasInduction) {
-        setCurrentPhase(PHASES.INDUCTION);
-      } else if (hasDeepening) {
-        setCurrentPhase(PHASES.DEEPENING);
-      } else {
-        setCurrentPhase(PHASES.AFFIRMATIONS);
-      }
+      // Add initial delay before starting first phase
+      transitionTimerRef.current = setTimeout(() => {
+        // Start with induction if available, otherwise go to next phase
+        if (hasInduction) {
+          setCurrentPhase(PHASES.INDUCTION);
+        } else if (hasDeepening) {
+          setCurrentPhase(PHASES.DEEPENING);
+        } else {
+          setCurrentPhase(PHASES.AFFIRMATIONS);
+        }
+      }, PHASE_TRANSITION_DELAY);
     }
   }, [localIsPlaying, localSessionItems, playAudio, stopAudio, audioElement, hasInduction, hasDeepening]);
 
   const handleBack = useCallback(() => {
     setLocalIsPlaying(false);
-    setCurrentPhase(PHASES.INDUCTION);
+    setCurrentPhase(PHASES.PREPARING);
     setScriptText('');
     setScriptProgress(0);
     stopAudio();
@@ -377,13 +423,17 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
     }
     if (scriptTimerRef.current) {
       clearInterval(scriptTimerRef.current);
+    }
+    if (transitionTimerRef.current) {
+      clearTimeout(transitionTimerRef.current);
+      transitionTimerRef.current = null;
     }
     onBack();
   }, [stopAudio, onBack, audioElement]);
 
   const handleEndSession = useCallback(() => {
     setLocalIsPlaying(false);
-    setCurrentPhase(PHASES.INDUCTION);
+    setCurrentPhase(PHASES.PREPARING);
     setScriptText('');
     setScriptProgress(0);
     stopAudio();
@@ -401,12 +451,16 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
     if (scriptTimerRef.current) {
       clearInterval(scriptTimerRef.current);
     }
+    if (transitionTimerRef.current) {
+      clearTimeout(transitionTimerRef.current);
+      transitionTimerRef.current = null;
+    }
     onEndSession();
   }, [stopAudio, onEndSession, audioElement]);
 
   // Skip to a specific phase (for testing)
   const skipToPhase = useCallback((targetPhase) => {
-    // Stop current audio
+    // Stop current audio and timers
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current = null;
@@ -418,6 +472,10 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
     if (scriptTimerRef.current) {
       clearInterval(scriptTimerRef.current);
       scriptTimerRef.current = null;
+    }
+    if (transitionTimerRef.current) {
+      clearTimeout(transitionTimerRef.current);
+      transitionTimerRef.current = null;
     }
     if (audioElement) {
       audioElement.pause();
@@ -454,8 +512,9 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
   // Calculate total session progress across all phases
   const totalProgress = useMemo(() => {
     // Each phase gets a portion of the total progress
-    // Induction: 0-20%, Deepening: 20-40%, Affirmations: 40-90%, Awakening: 90-100%
+    // Preparing: 0%, Induction: 0-20%, Deepening: 20-40%, Affirmations: 40-90%, Awakening: 90-100%
     const phaseWeights = {
+      [PHASES.PREPARING]: { start: 0, end: 0 },
       [PHASES.INDUCTION]: { start: 0, end: 20 },
       [PHASES.DEEPENING]: { start: 20, end: 40 },
       [PHASES.AFFIRMATIONS]: { start: 40, end: 90 },
@@ -466,6 +525,7 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
     const currentWeight = phaseWeights[currentPhase];
     if (!currentWeight) return 0;
 
+    if (currentPhase === PHASES.PREPARING) return 0;
     if (currentPhase === PHASES.COMPLETE) return 100;
 
     if (currentPhase === PHASES.AFFIRMATIONS) {
@@ -614,16 +674,25 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
           </div>
         </div>
 
-        {/* Script Display (for induction/deepening/awakening) */}
-        {scriptText && (
+        {/* Preparing Display - shown during initial delay */}
+        {currentPhase === PHASES.PREPARING && localIsPlaying && (
+          <div className="script-display preparing">
+            <div className="script-state">
+              <span className="material-icons state-icon">{PHASE_INFO[PHASES.PREPARING].icon}</span>
+              <span className="state-title">{PHASE_INFO[PHASES.PREPARING].title}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Script Display (for induction/deepening/awakening) - shows only phase state */}
+        {scriptText && currentPhase !== PHASES.AFFIRMATIONS && currentPhase !== PHASES.COMPLETE && currentPhase !== PHASES.PREPARING && (
           <div className="script-display">
             <div className="script-progress-bar">
               <div className="script-progress-fill" style={{ width: `${scriptProgress}%` }}></div>
             </div>
-            <div className="script-text">
-              {scriptText.split('\n\n').map((paragraph, idx) => (
-                <p key={idx}>{paragraph}</p>
-              ))}
+            <div className="script-state">
+              <span className="material-icons state-icon">{PHASE_INFO[currentPhase]?.icon || 'self_improvement'}</span>
+              <span className="state-title">{PHASE_INFO[currentPhase]?.title || 'Carregando...'}</span>
             </div>
           </div>
         )}
@@ -739,6 +808,16 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
               step={0.01}
               unit=""
               onChange={setVoiceVolume}
+            />
+
+            <SliderTile
+              label="Velocidade"
+              value={playbackSpeed}
+              min={0.5}
+              max={1.5}
+              step={0.05}
+              unit="x"
+              onChange={setPlaybackSpeed}
             />
           </div>
         </div>

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './providers/AuthProvider';
+import { LanguageProvider } from './providers/LanguageProvider';
 import { AudioProvider } from './providers/AudioProvider';
 import { AffirmationProvider } from './providers/AffirmationProvider';
 import { SessionSetupScreen } from './components/SessionSetupScreen';
 import { PlayerScreen } from './components/PlayerScreen';
 import { AuthScreen } from './components/AuthScreen';
+import { LanguageSelector } from './components/LanguageSelector';
 
 function MainApp() {
   const [sessionConfig, setSessionConfig] = useState(null);
@@ -56,11 +58,16 @@ function AppContent() {
 
   // Show main app
   return (
-    <AudioProvider>
-      <AffirmationProvider>
-        <MainApp />
-      </AffirmationProvider>
-    </AudioProvider>
+    <LanguageProvider>
+      <AudioProvider>
+        <AffirmationProvider>
+          <div className="app-container">
+            <LanguageSelector />
+            <MainApp />
+          </div>
+        </AffirmationProvider>
+      </AudioProvider>
+    </LanguageProvider>
   );
 }
 
