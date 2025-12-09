@@ -96,3 +96,14 @@ button, input, label {
     transform: rotate(360deg);
   }
 }
+
+/* App Container */
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-container > *:last-child {
+  flex: 1;
+}

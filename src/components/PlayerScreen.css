@@ -644,6 +644,41 @@
   margin-bottom: 0;
 }
 
+/* Script State Display (shows phase name instead of text) */
+.script-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem 1rem;
+}
+
+.script-state .state-icon {
+  font-size: 3rem;
+  color: #4fd1c5;
+  animation: pulse-icon 2s ease-in-out infinite;
+}
+
+@keyframes pulse-icon {
+  0%, 100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+.script-state .state-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 0.05em;
+}
+
+
 /* Session Complete */
 .session-complete {
   display: flex;

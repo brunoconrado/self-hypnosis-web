@@ -123,18 +123,7 @@ class ApiService {
     return null;
   }
 
-  // Categories (public endpoint)
-  async getCategories() {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/categories`);
-      if (response.ok) {
-        return await response.json();
-      }
-    } catch (err) {
-      console.error('[API] Categories fetch failed:', err);
-    }
-    return [];
-  }
+  // Categories (public endpoint) - replaced by method at end of class
 
   // Affirmations
   async getAffirmations() {
@@ -269,11 +258,14 @@ class ApiService {
   }
 
   // Scripts (public endpoints)
-  async getScripts(type = null, language = 'pt-BR') {
+  async getScripts(type = null, language = 'pt-BR', voiceId = null) {
     try {
       let url = `${API_BASE_URL}/api/scripts?language=${language}`;
       if (type) {
         url += `&type=${type}`;
+      }
+      if (voiceId) {
+        url += `&voice_id=${voiceId}`;
       }
       const response = await fetch(url);
       if (response.ok) {
@@ -285,16 +277,16 @@ class ApiService {
     return [];
   }
 
-  async getInductions(language = 'pt-BR') {
-    return this.getScripts('induction', language);
+  async getInductions(language = 'pt-BR', voiceId = null) {
+    return this.getScripts('induction', language, voiceId);
   }
 
-  async getDeepenings(language = 'pt-BR') {
-    return this.getScripts('deepening', language);
+  async getDeepenings(language = 'pt-BR', voiceId = null) {
+    return this.getScripts('deepening', language, voiceId);
   }
 
-  async getAwakenings(language = 'pt-BR') {
-    return this.getScripts('awakening', language);
+  async getAwakenings(language = 'pt-BR', voiceId = null) {
+    return this.getScripts('awakening', language, voiceId);
   }
 
   async getScriptById(scriptId) {
@@ -307,6 +299,57 @@ class ApiService {
       console.error('[API] Script fetch failed:', err);
     }
     return null;
+  }
+
+  // Voices (public endpoint)
+  async getAvailableVoices(language = null) {
+    try {
+      let url = `${API_BASE_URL}/api/voices/available`;
+      if (language) {
+        url += `?language=${language}`;
+      }
+      const response = await fetch(url);
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (err) {
+      console.error('[API] Voices fetch failed:', err);
+    }
+    return { voices: [], default_voice_id: null };
+  }
+
+  // Get affirmations for a specific voice and language
+  async getAffirmationsForVoice(voiceId, language = null) {
+    try {
+      let url = `${API_BASE_URL}/api/affirmations/default?voice_id=${voiceId}`;
+      if (language) {
+        url += `&language=${language}`;
+      }
+      const response = await fetch(url);
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (err) {
+      console.error('[API] Affirmations for voice fetch failed:', err);
+    }
+    return [];
+  }
+
+  // Get categories for a specific language
+  async getCategories(language = null) {
+    try {
+      let url = `${API_BASE_URL}/api/categories`;
+      if (language) {
+        url += `?language=${language}`;
+      }
+      const response = await fetch(url);
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (err) {
+      console.error('[API] Categories fetch failed:', err);
+    }
+    return [];
   }
 }
 
