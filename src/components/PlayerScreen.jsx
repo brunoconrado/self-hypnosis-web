@@ -79,10 +79,10 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
 
   const isPlaying = isAudioPlaying || localIsPlaying;
 
-  // Check if we have scripts
-  const hasInduction = sessionConfig?.induction?.text;
-  const hasDeepening = sessionConfig?.deepening?.text;
-  const hasAwakening = sessionConfig?.awakening?.text;
+  // Check if we have scripts (check for audio_url since scripts are audio files)
+  const hasInduction = sessionConfig?.induction?.audio_url;
+  const hasDeepening = sessionConfig?.deepening?.audio_url;
+  const hasAwakening = sessionConfig?.awakening?.audio_url;
 
   // Initialize session items from config
   useEffect(() => {
@@ -117,14 +117,15 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
     }, PHASE_TRANSITION_DELAY);
   }, []);
 
-  // Play a script phase (plays audio if available, shows text, advances after audio ends)
+  // Play a script phase (plays audio, advances after audio ends)
   const playScriptPhase = useCallback((script, nextPhase) => {
-    if (!script?.text) {
+    if (!script?.audio_url) {
       advanceToPhase(nextPhase);
       return;
     }
 
-    setScriptText(script.text);
+    // Use title/description as display text, or default text based on phase
+    setScriptText(script.title || script.description || 'Carregando...');
     setScriptProgress(0);
 
     // Clear any existing timer
@@ -139,57 +140,33 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
       scriptAudioRef.current = null;
     }
 
-    // If script has audio, play it
-    if (script.audio_url) {
-      const audioUrl = script.audio_url.startsWith('http')
-        ? script.audio_url
-        : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${script.audio_url}`;
+    // Play the script audio
+    const audioUrl = script.audio_url.startsWith('http')
+      ? script.audio_url
+      : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${script.audio_url}`;
 
-      const audio = new Audio(audioUrl);
-      audio.volume = voiceVolumeRef.current;
-      audio.playbackRate = playbackSpeedRef.current;
-      scriptAudioRef.current = audio;
-      currentAudioRef.current = audio; // Track for volume/speed updates
+    const audio = new Audio(audioUrl);
+    audio.volume = voiceVolumeRef.current;
+    audio.playbackRate = playbackSpeedRef.current;
+    scriptAudioRef.current = audio;
+    currentAudioRef.current = audio; // Track for volume/speed updates
 
-      // Track progress
-      audio.ontimeupdate = () => {
-        if (audio.duration > 0) {
-          setScriptProgress((audio.currentTime / audio.duration) * 100);
-        }
-      };
+    // Track progress
+    audio.ontimeupdate = () => {
+      if (audio.duration > 0) {
+        setScriptProgress((audio.currentTime / audio.duration) * 100);
+      }
+    };
 
-      // When audio ends, advance to next phase with delay
-      audio.onended = () => {
-        advanceToPhase(nextPhase);
-      };
+    // When audio ends, advance to next phase with delay
+    audio.onended = () => {
+      advanceToPhase(nextPhase);
+    };
 
-      audio.onerror = () => {
-        console.error('Script audio failed to load:', audioUrl);
-        currentAudioRef.current = null;
-        // Fallback to timer-based approach
-        const duration = (script.duration_estimate_sec || 60) * 1000;
-        const updateInterval = 100;
-        let elapsed = 0;
-
-        scriptTimerRef.current = setInterval(() => {
-          elapsed += updateInterval;
-          setScriptProgress((elapsed / duration) * 100);
-
-          if (elapsed >= duration) {
-            clearInterval(scriptTimerRef.current);
-            scriptTimerRef.current = null;
-            advanceToPhase(nextPhase);
-          }
-        }, updateInterval);
-      };
-
-      audio.play().catch(err => {
-        console.error('Failed to play script audio:', err);
-        // Trigger error handler fallback
-        audio.onerror();
-      });
-    } else {
-      // No audio, use timer-based approach
+    audio.onerror = () => {
+      console.error('Script audio failed to load:', audioUrl);
+      currentAudioRef.current = null;
+      // Fallback to timer-based approach
       const duration = (script.duration_estimate_sec || 60) * 1000;
       const updateInterval = 100;
       let elapsed = 0;
@@ -204,7 +181,13 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
           advanceToPhase(nextPhase);
         }
       }, updateInterval);
-    }
+    };
+
+    audio.play().catch(err => {
+      console.error('Failed to play script audio:', err);
+      // Trigger error handler fallback
+      audio.onerror();
+    });
   }, [advanceToPhase]);
 
   // Handle phase transitions
@@ -223,6 +206,17 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
     // Affirmations phase is handled by existing audio playback logic
     // Awakening is triggered when affirmations complete
   }, [currentPhase, localIsPlaying, hasInduction, hasDeepening, sessionConfig, playScriptPhase]);
+
+  // Handle session complete - stop binaural beat after 3 seconds
+  useEffect(() => {
+    if (currentPhase === PHASES.COMPLETE) {
+      setLocalIsPlaying(false);
+      const timer = setTimeout(() => {
+        stopAudio();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [currentPhase, stopAudio]);
 
   // Handle shuffle toggle
   const handleShuffleToggle = () => {
@@ -261,11 +255,10 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
         transitionTimerRef.current = setTimeout(() => {
           setCurrentPhase(PHASES.COMPLETE);
           setLocalIsPlaying(false);
-          stopAudio();
         }, PHASE_TRANSITION_DELAY);
       }
     }
-  }, [localCurrentIndex, localSessionItems.length, loopEnabled, stopAudio, hasAwakening, sessionConfig, playScriptPhase]);
+  }, [localCurrentIndex, localSessionItems.length, loopEnabled, hasAwakening, sessionConfig, playScriptPhase]);
 
   // Refs to access current values without re-triggering effect
   const gapBetweenSecRef = useRef(gapBetweenSec);
