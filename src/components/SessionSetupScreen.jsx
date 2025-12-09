@@ -279,10 +279,13 @@ export function SessionSetupScreen({ onStartSession }) {
           <div className="categories-list">
             {Object.values(categoryData).map(category => (
               <div key={category.id} className="category-block">
-                <button
+                <div
                   className={`category-header ${expandedCategory === category.id ? 'expanded' : ''}`}
                   onClick={() => setExpandedCategory(expandedCategory === category.id ? null : category.id)}
                   style={{ '--accent': category.colors.accent }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === 'Enter' && setExpandedCategory(expandedCategory === category.id ? null : category.id)}
                 >
                   <div className="category-info">
                     <span className="material-icons category-icon">{category.icon}</span>
@@ -303,7 +306,7 @@ export function SessionSetupScreen({ onStartSession }) {
                       {expandedCategory === category.id ? 'expand_less' : 'expand_more'}
                     </span>
                   </div>
-                </button>
+                </div>
 
                 {expandedCategory === category.id && (
                   <div className="affirmations-list">

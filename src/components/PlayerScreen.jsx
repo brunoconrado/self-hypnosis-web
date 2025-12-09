@@ -93,6 +93,9 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
   // Script audio element ref
   const scriptAudioRef = useRef(null);
 
+  // Current audio element ref (for both scripts and affirmations)
+  const currentAudioRef = useRef(null);
+
   // Play a script phase (plays audio if available, shows text, advances after audio ends)
   const playScriptPhase = useCallback((script, nextPhase) => {
     if (!script?.text) {
@@ -124,6 +127,7 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
       const audio = new Audio(audioUrl);
       audio.volume = voiceVolumeRef.current;
       scriptAudioRef.current = audio;
+      currentAudioRef.current = audio; // Track for volume updates
 
       // Track progress
       audio.ontimeupdate = () => {
@@ -137,11 +141,13 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
         setScriptText('');
         setScriptProgress(0);
         scriptAudioRef.current = null;
+        currentAudioRef.current = null;
         setCurrentPhase(nextPhase);
       };
 
       audio.onerror = () => {
         console.error('Script audio failed to load:', audioUrl);
+        currentAudioRef.current = null;
         // Fallback to timer-based approach
         const duration = (script.duration_estimate_sec || 60) * 1000;
         const updateInterval = 100;
@@ -271,6 +277,7 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
     const audio = new Audio(item.audioUrl);
     audio.volume = voiceVolumeRef.current;
     setAudioElement(audio);
+    currentAudioRef.current = audio; // Track for volume updates
 
     // Track audio progress
     audio.ontimeupdate = () => {
@@ -283,17 +290,24 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
 
     audio.onended = () => {
       setAudioProgress(1);
+      currentAudioRef.current = null;
       setTimeout(playNextAudio, gapBetweenSecRef.current * 1000);
     };
 
     return () => {
       audio.pause();
       audio.src = '';
+      currentAudioRef.current = null;
     };
   }, [localIsPlaying, localCurrentIndex, localSessionItems, playNextAudio, currentPhase]);
 
-  // Update audio volume when changed (seamlessly)
+  // Update audio volume when changed (seamlessly) - applies to ALL audio
   useEffect(() => {
+    // Update the current audio ref (unified for all phases)
+    if (currentAudioRef.current) {
+      currentAudioRef.current.volume = voiceVolume;
+    }
+    // Also update legacy refs for safety
     if (audioElement) {
       audioElement.volume = voiceVolume;
     }
@@ -311,6 +325,10 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
       setScriptProgress(0);
       setAudioProgress(0);
       stopAudio();
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+      }
       if (audioElement) {
         audioElement.pause();
       }
@@ -346,6 +364,10 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
     setScriptText('');
     setScriptProgress(0);
     stopAudio();
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
     if (audioElement) {
       audioElement.pause();
     }
@@ -365,6 +387,10 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
     setScriptText('');
     setScriptProgress(0);
     stopAudio();
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
     if (audioElement) {
       audioElement.pause();
     }
@@ -377,6 +403,51 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
     }
     onEndSession();
   }, [stopAudio, onEndSession, audioElement]);
+
+  // Skip to a specific phase (for testing)
+  const skipToPhase = useCallback((targetPhase) => {
+    // Stop current audio
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+    if (scriptAudioRef.current) {
+      scriptAudioRef.current.pause();
+      scriptAudioRef.current = null;
+    }
+    if (scriptTimerRef.current) {
+      clearInterval(scriptTimerRef.current);
+      scriptTimerRef.current = null;
+    }
+    if (audioElement) {
+      audioElement.pause();
+    }
+
+    setScriptText('');
+    setScriptProgress(0);
+    setAudioProgress(0);
+
+    // If not playing, start playing
+    if (!localIsPlaying) {
+      playAudio();
+      setLocalIsPlaying(true);
+    }
+
+    // Set the target phase - the useEffect will handle starting the appropriate audio
+    if (targetPhase === PHASES.AFFIRMATIONS) {
+      setLocalCurrentIndex(0);
+    }
+    setCurrentPhase(targetPhase);
+
+    // Manually trigger script playback for script phases
+    if (targetPhase === PHASES.INDUCTION && hasInduction) {
+      setTimeout(() => playScriptPhase(sessionConfig.induction, PHASES.DEEPENING), 100);
+    } else if (targetPhase === PHASES.DEEPENING && hasDeepening) {
+      setTimeout(() => playScriptPhase(sessionConfig.deepening, PHASES.AFFIRMATIONS), 100);
+    } else if (targetPhase === PHASES.AWAKENING && hasAwakening) {
+      setTimeout(() => playScriptPhase(sessionConfig.awakening, PHASES.COMPLETE), 100);
+    }
+  }, [audioElement, localIsPlaying, playAudio, hasInduction, hasDeepening, hasAwakening, sessionConfig, playScriptPhase]);
 
   const canPlay = localSessionItems.length > 0;
 
@@ -468,21 +539,37 @@ export function PlayerScreen({ sessionConfig, onBack, onEndSession }) {
           </div>
         </div>
 
-        {/* Phase Indicator */}
+        {/* Phase Indicator - Clickable for testing */}
         <div className="phase-steps">
-          <div className={`phase-step ${currentPhase === PHASES.INDUCTION ? 'active' : ''} ${[PHASES.DEEPENING, PHASES.AFFIRMATIONS, PHASES.AWAKENING, PHASES.COMPLETE].includes(currentPhase) ? 'completed' : ''}`}>
+          <div
+            className={`phase-step clickable ${currentPhase === PHASES.INDUCTION ? 'active' : ''} ${[PHASES.DEEPENING, PHASES.AFFIRMATIONS, PHASES.AWAKENING, PHASES.COMPLETE].includes(currentPhase) ? 'completed' : ''}`}
+            onClick={() => skipToPhase(PHASES.INDUCTION)}
+            title="Pular para Indução"
+          >
             <span className="material-icons">self_improvement</span>
           </div>
           <div className="phase-connector"></div>
-          <div className={`phase-step ${currentPhase === PHASES.DEEPENING ? 'active' : ''} ${[PHASES.AFFIRMATIONS, PHASES.AWAKENING, PHASES.COMPLETE].includes(currentPhase) ? 'completed' : ''}`}>
+          <div
+            className={`phase-step clickable ${currentPhase === PHASES.DEEPENING ? 'active' : ''} ${[PHASES.AFFIRMATIONS, PHASES.AWAKENING, PHASES.COMPLETE].includes(currentPhase) ? 'completed' : ''}`}
+            onClick={() => skipToPhase(PHASES.DEEPENING)}
+            title="Pular para Aprofundamento"
+          >
             <span className="material-icons">spa</span>
           </div>
           <div className="phase-connector"></div>
-          <div className={`phase-step ${currentPhase === PHASES.AFFIRMATIONS ? 'active' : ''} ${[PHASES.AWAKENING, PHASES.COMPLETE].includes(currentPhase) ? 'completed' : ''}`}>
+          <div
+            className={`phase-step clickable ${currentPhase === PHASES.AFFIRMATIONS ? 'active' : ''} ${[PHASES.AWAKENING, PHASES.COMPLETE].includes(currentPhase) ? 'completed' : ''}`}
+            onClick={() => skipToPhase(PHASES.AFFIRMATIONS)}
+            title="Pular para Afirmações"
+          >
             <span className="material-icons">record_voice_over</span>
           </div>
           <div className="phase-connector"></div>
-          <div className={`phase-step ${currentPhase === PHASES.AWAKENING ? 'active' : ''} ${currentPhase === PHASES.COMPLETE ? 'completed' : ''}`}>
+          <div
+            className={`phase-step clickable ${currentPhase === PHASES.AWAKENING ? 'active' : ''} ${currentPhase === PHASES.COMPLETE ? 'completed' : ''}`}
+            onClick={() => skipToPhase(PHASES.AWAKENING)}
+            title="Pular para Despertar"
+          >
             <span className="material-icons">wb_sunny</span>
           </div>
         </div>
